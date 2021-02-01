@@ -43,9 +43,9 @@ func (gh *githubFetcher) fetchGithubDirContents(path string) ([]string, error) {
 		return nil, err
 	}
 
-	fileNames := make([]string, 5)
-	for _, content := range dirContent {
-		fileNames = append(fileNames, *content.Name)
+	fileNames := make([]string, len(dirContent))
+	for i, content := range dirContent {
+		fileNames[i] = *content.Name
 	}
 
 	return fileNames, nil
@@ -105,9 +105,9 @@ func (gh *githubFetcher) getPlaces() ([]*Place, error) {
 type NumberType string
 
 const (
-	CONFIRMED  NumberType = "confirmed"
-	DEATHS     NumberType = "deaths"
-	RECOVERIES NumberType = "recoveries"
+	CONFIRMED NumberType = "confirmed"
+	DEATHS    NumberType = "deaths"
+	RECOVERED NumberType = "recovered"
 )
 
 type PlaceType string
@@ -117,19 +117,22 @@ const (
 	GLOBAL PlaceType = "global"
 )
 
-func (gh *githubFetcher) getNumbers(numberType NumberType, placeType PlaceType) error {
-	if placeType == US && numberType == RECOVERIES {
-		return errors.New("united states does not report recovery counts")
+func (gh *githubFetcher) getNumbers(numberType NumberType, placeType PlaceType) ([]map[string]string, error) {
+	if placeType == US && numberType == RECOVERED {
+		return nil, errors.New("united states does not report recovery counts")
 	}
 	fileName := fmt.Sprintf("time_series_covid19_%s_%s.csv", numberType, placeType)
 	filePath := path.Join("csse_covid_19_data", "csse_covid_19_time_series", fileName)
 
 	contents, err := gh.fetchGithubFileContentsViaDataApi(filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fmt.Print(contents)
+	maps, err := gocsv.CSVToMaps(strings.NewReader(contents))
+	if err != nil {
+		return nil, err
+	}
 
-	return nil
+	return maps, nil
 }

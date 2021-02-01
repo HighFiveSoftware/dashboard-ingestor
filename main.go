@@ -5,6 +5,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/jackc/pgx/v4"
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
 	"log"
 	"os"
 )
@@ -37,9 +38,14 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+	)
+	tc := oauth2.NewClient(ctx, ts)
 
 	gh := githubFetcher{
-		client: github.NewClient(nil),
+		client: github.NewClient(tc),
 		owner:  "CSSEGISandData",
 		repo:   "COVID-19",
 		branch: "master",
@@ -50,16 +56,15 @@ func main() {
 		gh:   &gh,
 	}
 
-	err = ingestor.ingestPlaces()
-	if err != nil {
-		log.Fatalf("Error ingesting places %v", err)
-	}
-
-	//err = ingestor.gh.getNumbers(CONFIRMED, US)
+	//err = ingestor.ingestPlaces()
 	//if err != nil {
-	//	log.Fatalf("Error getting numbers %v", err)
+	//	log.Fatalf("Error ingesting places %v", err)
 	//}
 
+	err = ingestor.ingestCaseNumbers()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	// rows, err := conn.Query(context.Background(), "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")
 	//if err != nil {
